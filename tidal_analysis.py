@@ -2,10 +2,60 @@
 
 # import the modules you need here
 import argparse
+import os
+import pandas as pd
+import numpy as np
 
-def read_tidal_data(filename):
 
-    return 0
+def read_tidal_data(filename_or_directory):
+    """
+    Read tidal data from file or directory.
+
+    Args:
+        filename_or_directory (str): Path to file or directory.
+
+    Returns:
+        pd.DataFrame: Tidal data.
+    """
+    data = []
+
+    if os.path.isdir(filename_or_directory):
+        # If directory is provided, read all files within the directory
+        directory = filename_or_directory
+        filenames = [os.path.join(directory, f)
+                     for f in os.listdir(directory) if f.endswith(".txt")]
+    else:
+        # If a single file is provided, use that file
+        filenames = [filename_or_directory]
+
+    for filename in filenames:
+        with open(filename, 'r', encoding='utf-8') as file:
+            lines = file.readlines()
+            # Skip headers
+            data_lines = lines[11:]
+            # Parse data
+            for line in data_lines:
+                parts = line.split()
+                if len(parts) >= 5:
+                    date_time = parts[1] + ' ' + parts[2]
+
+                    # parsing sea level
+                    sea_level_str = parts[3]
+                    if sea_level_str.endswith(('M', 'T', 'N')):
+                        sea_level = np.nan
+                    else:
+                        sea_level = float(sea_level_str)
+
+                    data.append((date_time,  sea_level))
+
+    data_frame = pd.DataFrame(data, columns=['Time', 'Sea Level'])
+    data_frame['Time'] = pd.to_datetime(data_frame['Time'], format='%Y/%m/%d %H:%M:%S')
+    data_frame.set_index('Time', inplace=True, drop=False)
+
+    return data_frame
+
+
+
     
 def extract_single_year_remove_mean(year, data):
    
