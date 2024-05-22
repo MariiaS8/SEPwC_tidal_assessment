@@ -5,6 +5,7 @@ import argparse
 import os
 import pandas as pd
 import numpy as np
+from scipy.stats import linregress
 
 
 def read_tidal_data(filename_or_directory):
@@ -102,16 +103,46 @@ def extract_section_remove_mean(start, end, data):
     return section_data
 
 
+
 def join_data(data1, data2):
+    """
+    Join two datasets.
 
-    return 
+    Args:
+        data1 (pd.DataFrame): First dataset.
+        data2 (pd.DataFrame): Second dataset.
 
+    Returns:
+        pd.DataFrame: Combined dataset.
+    """
+    combined_df = pd.concat([data1, data2])
+
+    combined_df.sort_index(inplace=True)
+
+    return combined_df
 
 
 def sea_level_rise(data):
+    """
+    Calculate sea level rise.
 
-                                                     
-    return 
+    Args:
+        data (pd.DataFrame): Tidal data.
+
+    Returns:
+        float: Sea level rise slope.
+        float: p-value.
+    """
+    clean_data = data.dropna(subset=['Sea Level'])
+    start_date = clean_data.index.min()
+    clean_data['Time_Fractional'] = data.index.to_series().apply(
+        lambda x: (x - start_date).total_seconds() / (3600 * 24))
+
+    result = linregress(
+        clean_data['Time_Fractional'], clean_data['Sea Level'])
+
+    return result.slope, result.pvalue
+
 
 def tidal_analysis(data, constituents, start_datetime):
 
