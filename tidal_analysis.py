@@ -1,11 +1,23 @@
 #!/usr/bin/env python3
+"""
+Tidal Analysis Module
 
-# import the modules you need here
+This module provides functions for analysing tidal data,
+including reading tidal data from files or directories,
+performing tidal analysis, extracting specific data segments,
+and calculating sea level rise.
+
+Usage:
+    $ python tidal_analysis.py directory_path
+
+"""
 import argparse
 import os
 import pandas as pd
 import numpy as np
 from scipy.stats import linregress
+import uptide
+
 
 
 def read_tidal_data(filename_or_directory):
@@ -145,33 +157,86 @@ def sea_level_rise(data):
 
 
 def tidal_analysis(data, constituents, start_datetime):
+    """
+    Perform tidal analysis on the provided data.
 
+    Args:
+        data (pd.DataFrame): Tidal data.
+        constituents (list): List of tidal constituents to analyze.
+        start_datetime (pd.Timestamp): Start datetime for analysis.
 
-    return 
+    Returns:
+        tuple: Amplitude and phase of tidal constituents.
+    """
+    tide = uptide.Tides(constituents)
+    tide.set_initial_time(start_datetime)
+
+    times = []
+    eta = []
+    for index, row in data.iterrows():
+        if not pd.isna(row['Sea Level']):
+            times.append((index.tz_localize(start_datetime.tzinfo) -
+                         start_datetime).total_seconds())
+            eta.append(row['Sea Level'])
+
+    amp, pha = uptide.harmonic_analysis(tide, eta, times)
+
+    return amp, pha
+
 
 def get_longest_contiguous_data(data):
+    """
+    Identify the longest contiguous segment of data based only on 'Sea Level'.
+
+    Args:
+        data (pd.DataFrame): Tidal data with 'Time' and 'Sea Level' columns.
+
+    Returns:
+        pd.DataFrame: The longest contiguous segment of tidal data.
+    """
+    valid_data_mask = data['Sea Level'].notna()
 
 
-    return 
+    # Compute the difference from the previous row to detect changes (0 -> 1 or 1 -> 0)
+    # Replace NaN in the first element (result of diff) with 0 to avoid interpretation errors
+    # Compare each element to 0 to determine if there is a change (True if changed, False if not)
+    # Cumulatively sum the True values to assign a unique block identifier to each segment
+    blocks = valid_data_mask.astype(int)\
+        .diff()\
+        .fillna(0)\
+        .ne(0)\
+        .cumsum()\
+
+    filtered_data = data[valid_data_mask]
+
+    longest_block = filtered_data.groupby(
+        blocks[valid_data_mask]).size().idxmax()
+
+    return filtered_data[blocks[valid_data_mask] == longest_block]
+
+
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
-                     prog="UK Tidal analysis",
-                     description="Calculate tidal constiuents and RSL from tide gauge data",
-                     epilog="Copyright 2024, Jon Hill"
-                     )
+        prog="UK Tidal analysis",
+        description="Calculate tidal constiuents and RSL from tide gauge data",
+        epilog="Copyright 2024, Jon Hill"
+    )
 
     parser.add_argument("directory",
-                    help="the directory containing txt files with data")
+                        help="the directory containing txt files with data")
     parser.add_argument('-v', '--verbose',
-                    action='store_true',
-                    default=False,
-                    help="Print progress")
+                        action='store_true',
+                        default=False,
+                        help="Print progress")
 
     args = parser.parse_args()
     dirname = args.directory
     verbose = args.verbose
+    dataframe = read_tidal_data(dirname)
+    amplitude, phase = tidal_analysis(dataframe, ['M2', 'S2'], dataframe.index.min())
+    print("Tidal constituents for ${}:", dirname)
+    print("Amplitude:", amplitude)
+    print("Phase:", phase)
     
-
-

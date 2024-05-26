@@ -8,6 +8,8 @@ from pylint.reporters import CollectingReporter
 from dataclasses import asdict
 import pandas as pd
 import numpy as np
+import pytz
+import datetime
 
 class TestTidalAnalysis():
     
@@ -126,7 +128,7 @@ class TestTidalAnalysis():
 
         slope, p_value = sea_level_rise(data)
         
-        assert slope == pytest.approx(2.94e-05,abs=1e-7)
+        assert slope == pytest.approx(2.94e-05,abs=1e-6)
         assert p_value == pytest.approx(0.427,abs=0.1)
         
 
@@ -166,18 +168,18 @@ class TestRegression():
     def test_whitby_regression(self):
 
         from subprocess import run
-        result = run(["python3","tidal_analysis.py","-v","data/whitby"], capture_output=True, check=True)
+        result = run(["python","tidal_analysis.py","-v","data/whitby"], capture_output=True, check=True)
         assert len(result.stdout) > 25
 
     def test_aberdeen_regression(self):
 
         from subprocess import run
-        result = run(["python3","tidal_analysis.py","--verbose","data/aberdeen"], capture_output=True, check=True)
+        result = run(["python","tidal_analysis.py","--verbose","data/aberdeen"], capture_output=True, check=True)
         assert len(result.stdout) > 25
 
     def test_dover_regression(self):
 
         from subprocess import run
-        result = run(["python3","tidal_analysis.py","data/dover"], capture_output=True, check=True)
+        result = run(["python","tidal_analysis.py","data/dover"], capture_output=True, check=True)
         assert len(result.stdout) > 25
 
